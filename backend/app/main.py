@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.database.seed import init_database
+from app.routers import auth, daily_logs, files, meals, workouts
 
 
 settings = get_settings()
@@ -29,6 +30,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
+app.include_router(daily_logs.router)
+app.include_router(workouts.router)
+app.include_router(meals.router)
+app.include_router(files.router)
 
 
 @app.get(f"{settings.api_prefix}/health")
