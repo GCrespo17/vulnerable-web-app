@@ -1,0 +1,4 @@
+FitTrackLab public workout template
+1. Warm-up for 10 minutes
+2. Pick 3 compound movements
+3. Log duration, reps, and notes
