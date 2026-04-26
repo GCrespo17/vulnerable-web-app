@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fittracklab-postgres
+    environment:
+      POSTGRES_DB: fittracklab
+      POSTGRES_USER: fittracklab
+      POSTGRES_PASSWORD: fittracklab
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fittracklab -d fittracklab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: fittracklab-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://fittracklab:fittracklab@postgres:5432/fittracklab
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
