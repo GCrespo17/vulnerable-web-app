@@ -5,6 +5,111 @@ export interface DemoUser {
   role: string
 }
 
+export interface WorkoutEntry {
+  id: number
+  daily_log_id: number
+  exercise_name: string
+  sets: number
+  reps: number
+  duration_minutes: number
+  calories_burned: number
+  notes: string
+}
+
+export interface MealEntry {
+  id: number
+  daily_log_id: number
+  meal_name: string
+  calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  notes: string
+}
+
+export interface DailyLog {
+  id: number
+  user_id: number
+  log_date: string
+  mood: string
+  weight_kg: number
+  notes: string
+  visibility: string
+  created_at: string
+}
+
+export interface DailyLogDetail extends DailyLog {
+  workouts: WorkoutEntry[]
+  meals: MealEntry[]
+}
+
+export interface DailyLogCreateInput {
+  log_date: string
+  mood: string
+  weight_kg: number
+  notes: string
+  visibility: string
+}
+
+export interface WorkoutCreateInput {
+  exercise_name: string
+  sets: number
+  reps: number
+  duration_minutes: number
+  calories_burned: number
+  notes: string
+}
+
+export interface MealCreateInput {
+  meal_name: string
+  calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  notes: string
+}
+
+export interface SearchDailyLogResult {
+  id: number
+  user_id: number
+  log_date: string
+  notes: string
+  visibility: string
+  created_at: string
+}
+
+export interface SearchWorkoutResult {
+  id: number
+  daily_log_id: number
+  exercise_name: string
+  notes: string
+}
+
+export interface SearchMealResult {
+  id: number
+  daily_log_id: number
+  meal_name: string
+  notes: string
+}
+
+export interface SearchResults {
+  query: string
+  daily_logs: SearchDailyLogResult[]
+  workouts: SearchWorkoutResult[]
+  meals: SearchMealResult[]
+}
+
+export interface FileRecord {
+  id: number
+  user_id: number
+  daily_log_id: number | null
+  original_name: string
+  stored_name: string
+  relative_path: string
+  content_type: string
+  created_at: string
+}
+
 const DEMO_USER_STORAGE_KEY = 'fittracklab.demoUser'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
@@ -36,6 +141,10 @@ export function storeDemoUser(user: DemoUser): void {
 
 export function clearStoredDemoUser(): void {
   localStorage.removeItem(DEMO_USER_STORAGE_KEY)
+}
+
+export function getApiBaseUrl(): string {
+  return API_BASE_URL
 }
 
 function getStoredDemoUserId(): string | null {
@@ -82,4 +191,83 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
 
 export function getDemoUsers(): Promise<DemoUser[]> {
   return requestJson<DemoUser[]>('/api/auth/users', { skipDemoUserHeader: true })
+}
+
+export function getDailyLogs(): Promise<DailyLog[]> {
+  return requestJson<DailyLog[]>('/api/daily-logs')
+}
+
+export function createDailyLog(payload: DailyLogCreateInput): Promise<DailyLog> {
+  return requestJson<DailyLog>('/api/daily-logs', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getDailyLogDetail(logId: number): Promise<DailyLogDetail> {
+  return requestJson<DailyLogDetail>(`/api/daily-logs/${logId}`)
+}
+
+export function createWorkout(logId: number, payload: WorkoutCreateInput): Promise<WorkoutEntry> {
+  return requestJson<WorkoutEntry>(`/api/daily-logs/${logId}/workouts`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createMeal(logId: number, payload: MealCreateInput): Promise<MealEntry> {
+  return requestJson<MealEntry>(`/api/daily-logs/${logId}/meals`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function searchRecords(query: string): Promise<SearchResults> {
+  const params = new URLSearchParams({ query })
+  return requestJson<SearchResults>(`/api/search?${params.toString()}`)
+}
+
+export function getFiles(): Promise<FileRecord[]> {
+  return requestJson<FileRecord[]>('/api/files')
+}
+
+export function getDownloadUrl(filename: string): string {
+  const params = new URLSearchParams({ filename })
+  return `${API_BASE_URL}/api/files/download?${params.toString()}`
+}
+
+export async function downloadFile(filename: string): Promise<void> {
+  const headers = new Headers()
+  const storedUserId = getStoredDemoUserId()
+
+  if (storedUserId) {
+    headers.set('X-Demo-User-Id', storedUserId)
+  }
+
+  const response = await fetch(getDownloadUrl(filename), { headers })
+
+  if (!response.ok) {
+    let detail = `Download failed with status ${response.status}`
+
+    try {
+      const errorData = (await response.json()) as { detail?: string }
+      if (errorData.detail) {
+        detail = errorData.detail
+      }
+    } catch {
+      // Ignore non-JSON download errors.
+    }
+
+    throw new Error(detail)
+  }
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename.split('/').pop() ?? filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
 }

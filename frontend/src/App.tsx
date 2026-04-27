@@ -8,7 +8,11 @@ import {
   type DemoUser,
 } from './api/client'
 import DashboardPage from './pages/DashboardPage'
+import DailyLogDetailPage from './pages/DailyLogDetailPage'
+import FilesPage from './pages/FilesPage'
 import LoginPage from './pages/LoginPage'
+import SearchPage from './pages/SearchPage'
+import TrackerPage from './pages/TrackerPage'
 
 function App() {
   const [demoUser, setDemoUser] = useState<DemoUser | null>(() => getStoredDemoUser())
@@ -27,7 +31,7 @@ function App() {
     <Routes>
       <Route
         path="/"
-        element={<Navigate to={demoUser ? '/dashboard' : '/login'} replace />}
+        element={<Navigate to="/login" replace />}
       />
       <Route
         path="/login"
@@ -42,6 +46,24 @@ function App() {
             <Navigate to="/login" replace />
           )
         }
+      />
+      <Route
+        path="/tracker"
+        element={demoUser ? <TrackerPage currentUser={demoUser} /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/daily-logs/:logId"
+        element={
+          demoUser ? <DailyLogDetailPage currentUser={demoUser} /> : <Navigate to="/login" replace />
+        }
+      />
+      <Route
+        path="/search"
+        element={demoUser ? <SearchPage currentUser={demoUser} /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/files"
+        element={demoUser ? <FilesPage currentUser={demoUser} /> : <Navigate to="/login" replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
