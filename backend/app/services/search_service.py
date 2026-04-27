@@ -13,8 +13,7 @@ from app.models.search import (
 def search_records(db: Session, query: str, current_user: User) -> SearchResponse:
     current_user  # Search stays authenticated, but the vulnerable SQL ignores visibility rules.
 
-    # Intentionally vulnerable for the academic lab: the user-controlled query is interpolated
-    # directly into raw SQL so students can observe SQL Injection and later defend it.
+    #Injectable Query with string interpolation
     daily_logs_sql = f"""
         SELECT id, user_id, log_date, notes, visibility, created_at
         FROM daily_logs
