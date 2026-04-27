@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database.models import (
     DailyLog,
+    DemoSession,
     FileRecord,
     MealEntry,
     TrainerAssignment,
@@ -53,6 +54,7 @@ def create_demo_upload_files() -> None:
 
 def seed_demo_data(session: Session) -> None:
     users = _seed_users(session)
+    _cleanup_demo_sessions(session, users)
     daily_logs = _seed_daily_logs(session, users)
     _seed_workouts(session, daily_logs)
     _seed_meals(session, daily_logs)
@@ -63,10 +65,30 @@ def seed_demo_data(session: Session) -> None:
 
 def _seed_users(session: Session) -> dict[str, User]:
     user_specs = [
-        {"name": "Alice Member", "email": "alice@example.fit", "role": "member"},
-        {"name": "Bob Member", "email": "bob@example.fit", "role": "member"},
-        {"name": "Tina Trainer", "email": "trainer@example.fit", "role": "trainer"},
-        {"name": "Admin User", "email": "admin@example.fit", "role": "admin"},
+        {
+            "name": "Alice Member",
+            "email": "alice@example.fit",
+            "password": "alice123",
+            "role": "member",
+        },
+        {
+            "name": "Bob Member",
+            "email": "bob@example.fit",
+            "password": "bob123",
+            "role": "member",
+        },
+        {
+            "name": "Tina Trainer",
+            "email": "trainer@example.fit",
+            "password": "trainer123",
+            "role": "trainer",
+        },
+        {
+            "name": "Admin User",
+            "email": "admin@example.fit",
+            "password": "admin123",
+            "role": "admin",
+        },
     ]
 
     users: dict[str, User] = {}
@@ -76,9 +98,21 @@ def _seed_users(session: Session) -> dict[str, User]:
             user = User(**spec)
             session.add(user)
             session.flush()
+        else:
+            user.name = spec["name"]
+            user.password = spec["password"]
+            user.role = spec["role"]
         users[spec["email"]] = user
 
     return users
+
+
+def _cleanup_demo_sessions(session: Session, users: dict[str, User]) -> None:
+    user_ids = [user.id for user in users.values()]
+    if user_ids:
+        session.query(DemoSession).filter(DemoSession.user_id.in_(user_ids)).delete(
+            synchronize_session=False
+        )
 
 
 def _seed_daily_logs(session: Session, users: dict[str, User]) -> dict[str, DailyLog]:

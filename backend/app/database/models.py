@@ -14,10 +14,12 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     role: Mapped[str] = mapped_column(String(50), nullable=False)
 
     daily_logs: Mapped[list[DailyLog]] = relationship(back_populates="user")
     file_records: Mapped[list[FileRecord]] = relationship(back_populates="user")
+    demo_sessions: Mapped[list[DemoSession]] = relationship(back_populates="user")
     trainer_memberships: Mapped[list[TrainerAssignment]] = relationship(
         back_populates="trainer",
         foreign_keys="TrainerAssignment.trainer_id",
@@ -124,3 +126,18 @@ class TrainerAssignment(Base):
         back_populates="member_assignments",
         foreign_keys=[member_id],
     )
+
+
+class DemoSession(Base):
+    __tablename__ = "demo_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship(back_populates="demo_sessions")
