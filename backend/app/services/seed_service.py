@@ -17,6 +17,7 @@ from app.database.models import (
 
 
 DEMO_UPLOADS_DIR = Path(__file__).resolve().parents[2] / "demo_uploads"
+DEMO_PUBLIC_UPLOADS_DIR = DEMO_UPLOADS_DIR / "public"
 
 DEMO_FILES = {
     "alice_progress_report.txt": "Alice Member progress report\nWeek: 2026-W17\nSteps average: 9,200\nCoach note: Keep the evening walks consistent.\n",
@@ -30,11 +31,24 @@ DEMO_FILES = {
 
 def create_demo_upload_files() -> None:
     DEMO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    DEMO_PUBLIC_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
     for filename, content in DEMO_FILES.items():
         file_path = DEMO_UPLOADS_DIR / filename
         if not file_path.exists():
             file_path.write_text(content, encoding="utf-8")
+
+    public_filenames = [
+        "alice_progress_report.txt",
+        "alice_meal_plan.txt",
+        "bob_progress_report.txt",
+        "bob_cutting_plan.txt",
+        "public_workout_template.txt",
+    ]
+    for filename in public_filenames:
+        public_file_path = DEMO_PUBLIC_UPLOADS_DIR / filename
+        if not public_file_path.exists():
+            public_file_path.write_text(DEMO_FILES[filename], encoding="utf-8")
 
 
 def seed_demo_data(session: Session) -> None:
