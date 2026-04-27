@@ -14,8 +14,7 @@ def list_demo_users(db: Session) -> list[User]:
 
 
 def login_user(db: Session, payload: LoginRequest) -> LoginResponse:
-    # Intentionally vulnerable for the academic lab: the login query interpolates
-    # user-controlled credentials directly into raw SQL so students can study SQL Injection.
+    #Intentional SQL Injectable query with string interpolation.
     login_sql = f"""
         SELECT id, name, email, role
         FROM users
