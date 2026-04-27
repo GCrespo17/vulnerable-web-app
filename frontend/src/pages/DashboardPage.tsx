@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import type { DemoUser } from '../api/client'
 
 type DashboardPageProps = {
@@ -9,22 +11,32 @@ const featureCards = [
   {
     title: 'Daily Logs',
     description: 'Review current check-ins, training notes, and the timeline of each day.',
+    href: '/tracker',
+    actionLabel: 'Open tracker',
   },
   {
     title: 'Workouts',
-    description: 'Track completed sessions, volume, and short reflections after each lift or run.',
+    description: 'Add workouts from a daily log entry and review completed training sessions.',
+    href: '/tracker',
+    actionLabel: 'Open logs to add workouts',
   },
   {
     title: 'Meals',
-    description: 'Capture calorie totals, meal structure, and the habits that support recovery.',
+    description: 'Add meals from a daily log entry and review recovery-focused nutrition notes.',
+    href: '/tracker',
+    actionLabel: 'Open logs to add meals',
   },
   {
     title: 'Search',
     description: 'Find recent notes across training and nutrition entries from one place.',
+    href: '/search',
+    actionLabel: 'Open search',
   },
   {
     title: 'Files',
     description: 'Open shared templates and member-specific reports stored for the local demo.',
+    href: '/files',
+    actionLabel: 'Open files',
   },
 ]
 
@@ -54,11 +66,13 @@ function DashboardPage({ currentUser, onSwitchUser }: DashboardPageProps) {
 
       <section className="feature-grid" aria-label="Core tracker areas">
         {featureCards.map((card) => (
-          <article key={card.title} className="feature-card">
-            <h2>{card.title}</h2>
-            <p>{card.description}</p>
-            <span className="feature-status">Foundation ready</span>
-          </article>
+            <article key={card.title} className="feature-card">
+              <h2>{card.title}</h2>
+              <p>{card.description}</p>
+              <Link className="inline-link" to={card.href}>
+                {card.actionLabel}
+              </Link>
+            </article>
         ))}
       </section>
     </main>

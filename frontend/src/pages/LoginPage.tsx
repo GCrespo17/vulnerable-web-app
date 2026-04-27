@@ -13,6 +13,7 @@ function LoginPage({ currentUser, onUserSelected }: LoginPageProps) {
   const navigate = useNavigate()
   const [users, setUsers] = useState<DemoUser[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(currentUser?.id ?? null)
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,8 +56,10 @@ function LoginPage({ currentUser, onUserSelected }: LoginPageProps) {
     [selectedUserId, users],
   )
 
-  const handleSubmit = () => {
-    if (!selectedUser) {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!selectedUser || !password.trim()) {
       return
     }
 
@@ -68,26 +71,44 @@ function LoginPage({ currentUser, onUserSelected }: LoginPageProps) {
     <main className="page-shell auth-shell">
       <section className="auth-card">
         <p className="eyebrow">FitTrackLab</p>
-        <h1>Select a demo user</h1>
+        <h1>Sign in to continue</h1>
         <p className="page-copy">
-          Choose one of the seeded classroom accounts to enter the local fitness tracker
-          environment. The app will use that selection for later backend requests.
+          Use one of the seeded classroom accounts to enter the local fitness tracker
+          environment. The sign-in form stays in demo mode and maps your selection to the
+          backend demo user header.
         </p>
+
+        <div className="auth-demo-note">
+          <strong>Demo mode</strong>
+          <span>Select a seeded account and enter any password to continue.</span>
+        </div>
 
         {loading ? <p className="status-message">Loading demo users...</p> : null}
         {error ? <p className="status-message status-error">{error}</p> : null}
 
         {!loading && !error ? (
-          <>
+          <form className="stack-form" onSubmit={handleSubmit}>
             <UserSelector
               users={users}
               selectedUserId={selectedUserId}
               onChange={setSelectedUserId}
             />
-            <button className="primary-button" type="button" onClick={handleSubmit}>
-              Enter dashboard
+            <label className="field-group">
+              <span className="field-label">Password</span>
+              <input
+                className="field-input"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter any demo password"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <button className="primary-button" type="submit">
+              Sign in
             </button>
-          </>
+          </form>
         ) : null}
       </section>
     </main>
