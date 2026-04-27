@@ -110,18 +110,25 @@ export interface FileRecord {
   created_at: string
 }
 
-const DEMO_USER_STORAGE_KEY = 'fittracklab.demoUser'
+export interface LoginResponse {
+  access_token: string
+  token_type: string
+  user: DemoUser
+}
+
+const AUTH_TOKEN_STORAGE_KEY = 'fittracklab.authToken'
+const CURRENT_USER_STORAGE_KEY = 'fittracklab.currentUser'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 type RequestOptions = {
   method?: string
   body?: string
   headers?: HeadersInit
-  skipDemoUserHeader?: boolean
+  skipAuthHeader?: boolean
 }
 
 export function getStoredDemoUser(): DemoUser | null {
-  const value = localStorage.getItem(DEMO_USER_STORAGE_KEY)
+  const value = localStorage.getItem(CURRENT_USER_STORAGE_KEY)
 
   if (!value) {
     return null
@@ -130,35 +137,35 @@ export function getStoredDemoUser(): DemoUser | null {
   try {
     return JSON.parse(value) as DemoUser
   } catch {
-    localStorage.removeItem(DEMO_USER_STORAGE_KEY)
+    localStorage.removeItem(CURRENT_USER_STORAGE_KEY)
     return null
   }
 }
 
 export function storeDemoUser(user: DemoUser): void {
-  localStorage.setItem(DEMO_USER_STORAGE_KEY, JSON.stringify(user))
+  localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user))
 }
 
 export function clearStoredDemoUser(): void {
-  localStorage.removeItem(DEMO_USER_STORAGE_KEY)
+  localStorage.removeItem(CURRENT_USER_STORAGE_KEY)
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
 }
 
 export function getApiBaseUrl(): string {
   return API_BASE_URL
 }
 
-function getStoredDemoUserId(): string | null {
-  const user = getStoredDemoUser()
-  return user ? String(user.id) : null
+export function getStoredAuthToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
 }
 
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
 
-  const storedUserId = getStoredDemoUserId()
-  if (storedUserId && !options.skipDemoUserHeader && !headers.has('X-Demo-User-Id')) {
-    headers.set('X-Demo-User-Id', storedUserId)
+  const storedToken = getStoredAuthToken()
+  if (storedToken && !options.skipAuthHeader && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${storedToken}`)
   }
 
   if (options.body && !headers.has('Content-Type')) {
@@ -189,8 +196,30 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   return (await response.json()) as T
 }
 
-export function getDemoUsers(): Promise<DemoUser[]> {
-  return requestJson<DemoUser[]>('/api/auth/users', { skipDemoUserHeader: true })
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const response = await requestJson<LoginResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+    skipAuthHeader: true,
+  })
+
+  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.access_token)
+  storeDemoUser(response.user)
+  return response
+}
+
+export function getCurrentUser(): Promise<DemoUser> {
+  return requestJson<DemoUser>('/api/auth/me')
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await requestJson<{ message: string }>('/api/auth/logout', {
+      method: 'POST',
+    })
+  } finally {
+    clearStoredDemoUser()
+  }
 }
 
 export function getDailyLogs(): Promise<DailyLog[]> {
@@ -238,10 +267,10 @@ export function getDownloadUrl(filename: string): string {
 
 export async function downloadFile(filename: string): Promise<void> {
   const headers = new Headers()
-  const storedUserId = getStoredDemoUserId()
+  const storedToken = getStoredAuthToken()
 
-  if (storedUserId) {
-    headers.set('X-Demo-User-Id', storedUserId)
+  if (storedToken) {
+    headers.set('Authorization', `Bearer ${storedToken}`)
   }
 
   const response = await fetch(getDownloadUrl(filename), { headers })
