@@ -1,5 +1,6 @@
+from fastapi import HTTPException, status
 from sqlalchemy import Select, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database.models import DailyLog, TrainerAssignment, User
 from app.models.daily_logs import DailyLogCreate
@@ -53,8 +54,6 @@ def create_daily_log(
 def get_editable_daily_log(db: Session, current_user: User, log_id: int) -> DailyLog:
     daily_log = db.get(DailyLog, log_id)
     if daily_log is None:
-        from fastapi import HTTPException, status
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Daily log not found.",
@@ -76,9 +75,28 @@ def get_editable_daily_log(db: Session, current_user: User, log_id: int) -> Dail
         if assignment is not None:
             return daily_log
 
-    from fastapi import HTTPException, status
-
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="You cannot modify this daily log.",
     )
+
+
+def get_daily_log_by_id_vulnerable(db: Session, log_id: int) -> DailyLog:
+    # Intentionally vulnerable for the academic lab: this lookup resolves the log
+    # only by ID and skips authorization so students can observe the IDOR behavior.
+    daily_log = db.scalar(
+        select(DailyLog)
+        .options(
+            selectinload(DailyLog.workouts),
+            selectinload(DailyLog.meals),
+        )
+        .where(DailyLog.id == log_id)
+    )
+
+    if daily_log is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Daily log not found.",
+        )
+
+    return daily_log
