@@ -32,20 +32,24 @@ Do not add `/api/fixed/...` routes.
 
 Do not add automatic protections that prevent the required vulnerabilities from working.
 
+The application must remain local and containerized.
+
 ---
 
 ## General Rules
 
 1. The app must run locally.
-2. The app must not be deployed publicly.
-3. Vulnerable code must be clearly marked.
-4. The app must be safe for classroom use.
-5. The app must not target third-party systems.
-6. The app must not include destructive payloads.
-7. The app must not expose real system files.
+2. The app must run inside Docker containers.
+3. The app must not be deployed publicly.
+4. Vulnerable code must be clearly marked.
+5. The app must be safe for classroom use.
+6. The app must not target third-party systems.
+7. The app must not include destructive payloads.
 8. The app must use fake demo fitness data only.
 9. The app must not store real health or nutrition data.
-10. Documentation may include defense hints, but not complete fixed code.
+10. The app must not use real passwords or real personal data.
+11. Documentation may include defense hints, but not complete fixed code.
+12. The Directory Traversal lab may access fake files in the backend container filesystem, but must not expose the host filesystem.
 
 ---
 
@@ -122,7 +126,7 @@ The app must simulate a basic fitness tracker.
 
 Users should be able to:
 
-- Select a demo user.
+- Log in with seeded local lab credentials.
 - Create a daily fitness log.
 - Add workouts.
 - Add meals and calories.
@@ -132,55 +136,87 @@ Users should be able to:
 
 The app should feel like a normal web application, not only an API lab.
 
+Do not use a demo user selector as the primary authentication flow.
+
 ---
 
-## Demo Users
+## Seed Users
 
-Seed the database with at least these users.
+Seed the database with at least these fake local lab users.
 
 ### Alice Member
 
 - email: alice@example.fit
+- password: alice123
 - role: member
 
 ### Bob Member
 
 - email: bob@example.fit
+- password: bob123
 - role: member
 
 ### Tina Trainer
 
 - email: trainer@example.fit
+- password: trainer123
 - role: trainer
 
 ### Admin User
 
 - email: admin@example.fit
+- password: admin123
 - role: admin
+
+These credentials are fake and must only be used in the local lab.
+
+Do not use real passwords.
+
+Do not store real user data.
 
 ---
 
 ## Authentication Rules
 
-Use simple demo authentication.
+Use a real login flow for the demo application.
 
-Preferred behavior:
+Required endpoint:
 
-- The frontend has a demo user selector.
-- The frontend sends the selected user ID using the `X-Demo-User-Id` header.
-- The backend resolves the current user from this header.
+POST /api/auth/login
 
-Do not implement production authentication.
+The login request should include:
+
+- email
+- password
+
+The login response should include:
+
+- a simple demo access token or session token
+- basic user information
+
+Authenticated requests should use:
+
+Authorization: Bearer <token>
+
+The backend should resolve the current user from the token.
+
+Do not use `X-Demo-User-Id` as the main authentication mechanism.
+
+Do not implement production-grade authentication.
+
+Do not use real user credentials.
+
+The login endpoint must intentionally contain the SQL Injection vulnerability.
 
 ---
 
 ## SQL Injection Rules
 
-The SQL Injection feature must be available at:
+The required SQL Injection feature must be available at:
 
-GET /api/search?query=
+POST /api/auth/login
 
-The endpoint must intentionally build SQL unsafely.
+The login endpoint must intentionally build SQL unsafely.
 
 Allowed vulnerable patterns:
 
@@ -188,15 +224,13 @@ Allowed vulnerable patterns:
 - f-string SQL construction.
 - Unsafe raw SQL.
 
-The search should include:
+The vulnerability should allow authentication bypass in the local lab.
 
-- Workout exercise names.
-- Workout notes.
-- Meal names.
-- Meal notes.
-- Daily log notes.
+Expected vulnerable behavior:
 
-The vulnerability should allow the query behavior to be manipulated.
+- A user can bypass the login check.
+- A user can log in as another seeded user.
+- A user can log in as the seeded admin account.
 
 Restrictions:
 
@@ -204,7 +238,14 @@ Restrictions:
 - Do not drop tables.
 - Do not delete records.
 - Do not modify records through the SQL Injection demo.
-- Focus on unauthorized visibility or filter bypass.
+- Do not target external systems.
+- Do not include real credentials.
+
+Optional additional SQL Injection feature:
+
+GET /api/search?query=
+
+If implemented, this endpoint may also intentionally build SQL unsafely for search-related demonstrations.
 
 ---
 
@@ -220,11 +261,14 @@ Expected vulnerable behavior:
 
 - Alice can access Bob's private daily log by changing the ID.
 - Bob can access Alice's private daily log by changing the ID.
+- Any authenticated seeded user can access another user's private daily log by changing the ID.
 - The backend returns the object if it exists.
 
 Do not add backend authorization checks to this endpoint.
 
 Do not hide the vulnerability only with frontend UI restrictions.
+
+Do not implement a fixed version.
 
 ---
 
@@ -238,32 +282,57 @@ The endpoint must intentionally trust a user-controlled filename.
 
 The endpoint should use unsafe path handling.
 
-The demo must stay inside a controlled local file area.
+The demo should allow traversal outside the application project directory and into the backend Docker container filesystem.
 
-Use:
+This is allowed only inside the backend container.
+
+This must not expose the host filesystem.
+
+The Docker configuration must not mount sensitive host paths.
+
+Do not mount:
+
+- the host root filesystem
+- the Docker socket
+- SSH directories
+- browser profile directories
+- real secret directories
+- personal file directories
+
+Normal app files should exist in:
 
 backend/demo_uploads/
 
-Example files:
+Example normal app files:
 
 - alice_progress_report.txt
 - alice_meal_plan.txt
 - bob_progress_report.txt
 - bob_cutting_plan.txt
 - public_workout_template.txt
-- private_lab_secret.txt
 
-The file `private_lab_secret.txt` must be fake local lab data only.
+Fake container-level lab files should exist in the backend container at:
+
+/opt/fittrack-lab/
+
+Example fake container lab files:
+
+- container_note.txt
+- fake_container_secret.txt
+
+The fake container lab files must contain fake lab data only.
 
 Restrictions:
 
 - Do not expose real host files.
-- Do not use `/etc/passwd`.
+- Do not use host `/etc/passwd`.
 - Do not use SSH keys.
 - Do not use real `.env` files.
 - Do not use browser cookies.
 - Do not use personal files.
-- Do not read files outside the controlled demo area.
+- Do not mount the Docker socket.
+- Do not read from external systems.
+- Do not implement a fixed version.
 
 ---
 
@@ -273,7 +342,7 @@ Seed data must be deterministic.
 
 The demo must include:
 
-- At least 4 users.
+- At least 4 users with fake local lab passwords.
 - At least 4 daily logs.
 - At least 4 workout entries.
 - At least 4 meal entries.
@@ -282,7 +351,7 @@ The demo must include:
 - At least one private log for Bob.
 - At least one public log.
 - At least one trainer assignment.
-- At least one fake sensitive lab file for the Directory Traversal demonstration.
+- At least one fake container-level lab file for the Directory Traversal demonstration.
 
 ---
 
@@ -333,15 +402,17 @@ Use this backend structure or something very close:
 
 ## Naming Rules
 
-Use `app/db/models.py` for SQLAlchemy database models.
+Use `app/database/models.py` for SQLAlchemy database models.
 
 Use `app/models/` for Pydantic request and response models.
 
 Do not place SQLAlchemy models inside `app/models/`.
 
-Do not place Pydantic models inside `app/db/models.py`.
+Do not place Pydantic models inside `app/database/models.py`.
 
 This naming convention is intentional.
+
+Do not create or use an `app/db/` folder.
 
 ---
 
@@ -360,22 +431,25 @@ Routers should handle:
 
 Services should handle:
 
-- Demo authentication logic
-- Daily log creation and lookup
-- Meal creation and lookup
-- Workout creation and lookup
-- File listing
-- Vulnerable file download logic
-- Vulnerable search logic
-- Seed data helpers
+- Login and token/session logic.
+- Current-user resolution from the demo token.
+- Daily log creation and lookup.
+- Meal creation and lookup.
+- Workout creation and lookup.
+- File listing.
+- Vulnerable file download logic.
+- Vulnerable login SQL logic.
+- Optional vulnerable search logic.
+- Seed data helpers.
 
 The intentionally vulnerable logic should live in services when appropriate.
 
 Required vulnerability locations:
 
-- `app/services/search_service.py` should contain the intentionally unsafe SQL construction for SQL Injection.
+- `app/services/auth_service.py` should contain the intentionally unsafe SQL construction for login SQL Injection.
 - `app/services/daily_log_service.py` should contain the intentionally missing authorization check for IDOR.
 - `app/services/file_service.py` should contain the intentionally unsafe filename and path handling for Directory Traversal.
+- `app/services/search_service.py` may contain optional unsafe SQL construction if the optional vulnerable search endpoint is implemented.
 
 Do not accidentally fix these vulnerabilities in the service layer.
 
@@ -390,7 +464,14 @@ Use SQLAlchemy database models similar to these.
 - id
 - name
 - email
+- password
 - role
+
+For this academic lab, plaintext seeded demo passwords are acceptable only because the credentials are fake and the login endpoint is intentionally vulnerable.
+
+Do not use real passwords.
+
+Do not use real personal data.
 
 ### DailyLog
 
@@ -442,6 +523,21 @@ Use SQLAlchemy database models similar to these.
 - trainer_id
 - member_id
 
+### DemoSession or AuthToken
+
+Optional simple model for demo authentication.
+
+If implemented, it may include:
+
+- id
+- user_id
+- token
+- created_at
+
+Keep this simple.
+
+Do not implement production authentication.
+
 ---
 
 ## Frontend Rules
@@ -451,13 +547,15 @@ The frontend must:
 1. Be simple and readable.
 2. Use React with Vite.
 3. Use TypeScript.
-4. Provide a demo user selector.
-5. Provide a dashboard page.
-6. Provide a tracker page.
-7. Provide one lab page per vulnerability.
-8. Show API responses in a readable way.
-9. Include short explanations for students.
-10. Make the vulnerabilities easy to test manually.
+4. Provide a real login page.
+5. Store and send the demo token for authenticated requests.
+6. Provide a dashboard page.
+7. Provide a tracker page.
+8. Provide normal daily log detail pages.
+9. Provide a normal files page.
+10. Optionally provide a normal search page.
+11. Include short normal user-facing explanations.
+12. Make the app feel like a normal fitness tracker.
 
 The frontend must not:
 
@@ -467,6 +565,9 @@ The frontend must not:
 - Include persistence behavior.
 - Store real health information.
 - Include finished fixes.
+- Include exploit instructions.
+- Include attack-specific pages.
+- Use a demo user selector as the primary authentication mechanism.
 
 ---
 
@@ -487,12 +588,51 @@ The backend must:
 11. Use clear status codes.
 12. Return consistent JSON responses.
 13. Create fake demo upload files automatically if they do not exist.
+14. Create fake container-level lab files in the backend container.
+15. Implement a real login endpoint.
+16. Use token-based or session-like demo authentication after login.
 
 The backend must not:
 
 - Implement fixed versions of the vulnerabilities.
 - Add `/api/fixed/...` endpoints.
 - Prevent the required vulnerabilities from being demonstrated.
+- Expose host files.
+- Mount sensitive host paths.
+
+---
+
+## Docker Rules
+
+The app must run through Docker Compose.
+
+The Docker setup should include:
+
+- PostgreSQL container.
+- Backend container.
+- Frontend container.
+
+The backend container may contain fake lab files outside the application project directory, such as:
+
+- /opt/fittrack-lab/container_note.txt
+- /opt/fittrack-lab/fake_container_secret.txt
+
+These files must contain fake data only.
+
+The Docker setup must not mount sensitive host paths into the backend container.
+
+Do not mount:
+
+- /
+- /var/run/docker.sock
+- ~/.ssh
+- browser profile directories
+- real secret directories
+- personal file directories
+
+The Directory Traversal vulnerability should demonstrate access within the backend container filesystem only.
+
+It must not expose the host filesystem.
 
 ---
 
@@ -512,14 +652,20 @@ Each vulnerability document must explain:
 1. What the vulnerability is.
 2. Where it appears in this app.
 3. Why the vulnerable code is unsafe.
-4. How to demonstrate it safely.
+4. How to demonstrate it safely in the local lab.
 5. What the attacker is trying to achieve.
 6. What the impact is.
 7. High-level hints for how defenders could fix it later.
 
 Do not include complete fixed code.
 
+Do not include destructive payloads.
+
+Do not include instructions for attacking real systems.
+
 The README must document uv commands, not pip commands.
+
+The documentation must clearly state that the Directory Traversal lab is limited to the backend Docker container filesystem.
 
 ---
 
@@ -530,13 +676,15 @@ Basic backend tests are allowed.
 Tests should verify:
 
 - The app starts.
-- Seed data exists.
-- The vulnerable search endpoint exists.
+- Seed users exist.
+- The login endpoint exists.
+- The login SQL Injection vulnerability exists in the local lab.
 - The vulnerable daily log endpoint exists.
 - The vulnerable file download endpoint exists.
 - Demo files exist.
+- Fake container-level lab files exist.
 
-Tests may also verify the vulnerable behavior, but must stay safe and local.
+Tests may also verify vulnerable behavior, but must stay safe and local.
 
 Tests must not read real host files.
 
@@ -558,6 +706,10 @@ Do not use it against systems you do not own or have explicit permission to test
 
 Do not store real health, fitness, nutrition, or personal data in this application.
 
+Do not use real passwords or real personal data.
+
+Do not expose host files or mount sensitive host paths into the backend container.
+
 ---
 
 ## Definition of Done
@@ -573,10 +725,12 @@ The project is done when:
 - The backend does not have `requirements.txt`.
 - The frontend works.
 - The backend works.
+- The app has a real login page.
 - The tracker page allows basic demo log creation.
-- The SQL Injection vulnerability is available.
+- The login SQL Injection vulnerability is available.
 - The IDOR vulnerability is available.
-- The Directory Traversal vulnerability is available in the controlled demo area.
+- The Directory Traversal vulnerability is available inside the backend container filesystem.
+- The Docker setup does not expose host secrets or host sensitive paths.
 - Documentation is complete.
 - No fixed endpoints are implemented.
-- No real host files or external systems are required for the demo.
+- No real host files, real credentials, real health data, or external systems are required for the demo.
